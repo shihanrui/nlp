@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from pathlib import Path
 import pkuseg
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
@@ -13,7 +14,7 @@ from config import train_path, test_path, label_path
 def loadData(train_path, test_path, label_path):
     df_train = pd.read_csv(train_path)
     df_test = pd.read_csv(test_path)
-    df = pd.concat([df_train, df_test], ignore_index=True)
+    # df = pd.concat([df_train, df_test], ignore_index=True)
     # print(df)
 
     label_dict = np.load(label_path, allow_pickle=True).tolist()
@@ -23,7 +24,7 @@ def loadData(train_path, test_path, label_path):
     # print(df)
     # print(label_dict_reverse)
     print("Load data successfully.")
-    return df, label_dict_reverse
+    return df_train, df_test, label_dict_reverse
 
 
 def get_text(texts):
@@ -81,28 +82,35 @@ def report(k, y_test, y_pred):
 
 
 def main():
-    df, label_dict_reverse = loadData(train_path, test_path, label_path)
-    df = seg_word(df, label_dict_reverse)
+    train_segged_path = Path("./process_data/train_segged.csv")
+    test_segged_path = Path("./process_data/test_segged.csv")
+    if train_segged_path.exists() and test_segged_path.exists():
+        df_train = pd.read_csv(train_segged_path)
+        df_test = pd.read_csv(test_segged_path)
+    else:
+        df_train, df_test, label_dict_reverse = loadData(
+            train_path, test_path, label_path)
+        df_train = seg_word(df_train, label_dict_reverse)
+        df_train.to_csv(train_segged_path)
+        df_test = seg_word(df_test, label_dict_reverse)
+        df_test.to_csv(test_segged_path)
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        df.segm,
-        df.label,
-        test_size=0.2,
-        stratify=df.label,
-        random_state=1000
-    )
+    X_train, X_test, y_train, y_test = df_train.segm, df_test.segm, df_train.label, df_test.label
 
-    clf = Pipeline([
-        ('vectorizer_tfidf', TfidfVectorizer()),
-        ("LR", LogisticRegression())
-    ])
+    clf_path = Path("tfidf.joblib")
+    if clf_path.exists():
+        clf = joblib.load(clf_path)
+    else:
+        clf = Pipeline([
+            ('vectorizer_tfidf', TfidfVectorizer()),
+            ("LR", LogisticRegression())
+        ])
 
-    clf.fit(X_train.values.astype('U'), y_train)
+        clf.fit(X_train.values.astype('U'), y_train)
 
-    joblib.dump(clf, 'tfidf.joblib')
-    print("dump pipeline successfully.")
+        joblib.dump(clf, 'tfidf.joblib')
+        print("dump pipeline successfully.")
 
-    # clf = joblib.load("./tfidf.joblib")
     k = input("k:")
     y_pred = top_k_eval(k, X_test, y_test, clf)
     report(k, y_pred, y_test)
