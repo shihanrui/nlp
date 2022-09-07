@@ -1,0 +1,9 @@
+tfidf.joblib
+*.csv
+*.ipynb
+__pycache__/
+process_data/
+finetuned/
+cache/
+
+
