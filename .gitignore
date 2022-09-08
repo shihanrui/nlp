@@ -1,9 +1,11 @@
 tfidf.joblib
 *.csv
 *.ipynb
+*.xlsx
 __pycache__/
 process_data/
 finetuned/
 cache/
+
 
 

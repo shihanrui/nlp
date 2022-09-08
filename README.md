@@ -1,3 +1,3 @@
 # nlp
-a new line of code \
-yet another line of code
+
+modify data path and parameters in config.py
